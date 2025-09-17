@@ -233,16 +233,24 @@ class JitSpec:
         include_dirs = [str(p) for p in self.extra_include_dirs] if self.extra_include_dirs else []
         include_dirs.extend([
             str(jit_env.FLASHINFER_INCLUDE_DIR),
-            str(jit_env.FLASHINFER_CSRC_DIR)
+            str(jit_env.FLASHINFER_CSRC_DIR),
+            "/usr/include/c++/11",  # System C++ headers
+            "/usr/include/c++/12", 
+            "/usr/include",
+            "/usr/local/cuda/include/cub",  # CUB headers
+            "/usr/local/cuda/include/thrust"  # Thrust headers
         ])
         
-        nvcc_options = []
+        nvcc_options = [
+            "--default-device",  # Treat unannotated functions as __device__
+            "-std=c++17"         # Ensure C++17 support
+        ]
         if self.extra_cuda_cflags:
             nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
-                                "-lineinfo", "-g", "--ptxas-options", "-static-global-template-stub",
-                                "-std", "--std"}
-            nvcc_options = [flag for flag in self.extra_cuda_cflags 
-                          if not any(flag.startswith(incomp) for incomp in nvrtc_incompatible)]
+                                "-lineinfo", "-g", "--ptxas-options", "-static-global-template-stub"}
+            compatible_flags = [flag for flag in self.extra_cuda_cflags 
+                              if not any(flag.startswith(incomp) for incomp in nvrtc_incompatible)]
+            nvcc_options.extend(compatible_flags)
         
         for source_path in self.sources:
             if source_path.suffix != '.cu':
