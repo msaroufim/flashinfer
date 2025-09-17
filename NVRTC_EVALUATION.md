@@ -13,24 +13,32 @@ Implemented PyTorch `_compile_kernel` (NVRTC) backend as alternative to ninja-ba
 ✅ **No filesystem I/O** during compilation  
 ✅ **Direct PyTorch integration** via `_compile_kernel`  
 
-## What Doesn't Work
+## What Doesn't Work  
 ❌ **FlashInfer's templated kernels** (activation, quantization, norm)  
+❌ **System C++ headers** (`<cstdint>`, `<cstddef>`, missing GCC macros)  
 ❌ **Thrust library dependencies** (not NVRTC compatible)  
-❌ **Complex C++ standard library usage** (`<cstdint>`, `<cstddef>`)  
 ❌ **FlashInfer's header hierarchy** (math.cuh, pos_enc.cuh, etc.)  
+
+## Known Issues
+🔍 **System header compatibility**: NVRTC struggles with GCC-specific headers  
+- Missing `__SIZE_TYPE__`, `__PTRDIFF_TYPE__` macros
+- 32/64-bit architecture detection problems  
+- GNU stubs header conflicts (`stubs-32.h` vs `stubs-64.h`)
+- **This is solvable** but requires more investigation into NVRTC header setup
 
 ## Technical Details
 
-### Implementation
+### Implementation  
 - Added `build_with_nvrtc(kernel_names)` method to `JitSpec` class
 - Added `build_and_load_with_nvrtc(kernel_names)` convenience method  
 - Automatic filtering of NVRTC-incompatible flags (`-O3`, `--use_fast_math`, etc.)
 - Explicit kernel name specification (no auto-discovery)
+- Basic include path setup for FlashInfer headers
 
-### Failure Analysis
+### Current Limitations
 Real FlashInfer kernels fail because:
-1. **System headers**: NVRTC lacks `<cstdint>`, `<cstddef>` access
-2. **Thrust incompatibility**: Thrust functions need `__host__/__device__` annotations
+1. **System headers**: Complex GCC-specific header dependencies
+2. **Architecture detection**: 32/64-bit wordsize issues with GNU headers  
 3. **Template complexity**: Heavy use of C++ templates and STL
 
 ## Recommendations
