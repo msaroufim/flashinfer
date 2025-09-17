@@ -11,44 +11,36 @@ def create_minimal_kernel_test():
     # Test 1: Simplified Page kernel (memory copy pattern)
     page_kernel = Path("/tmp/page_kernel.cu")
     page_kernel.write_text("""
-#include <cuda_runtime.h>
-
-template<typename DType, typename IdType>
+extern "C" {
 __global__ void AppendPagedKVCacheDecodeKernel_simple(
-    DType* __restrict__ paged_data,
-    DType* __restrict__ key, 
-    DType* __restrict__ value,
-    IdType batch_size,
-    IdType head_dim) {
+    float* __restrict__ paged_data,
+    float* __restrict__ key, 
+    float* __restrict__ value,
+    int batch_size,
+    int head_dim) {
     
-    uint32_t tx = threadIdx.x;
-    uint32_t batch_idx = blockIdx.x;
+    int tx = threadIdx.x;
+    int batch_idx = blockIdx.x;
     
     if (batch_idx < batch_size && tx < head_dim) {
-        uint32_t offset = batch_idx * head_dim + tx;
+        int offset = batch_idx * head_dim + tx;
         paged_data[offset] = key[offset] + value[offset];
     }
 }
-
-// Explicit instantiation for common types
-template __global__ void AppendPagedKVCacheDecodeKernel_simple<float, int>(
-    float*, float*, float*, int, int);
+}
 """)
     
     # Test 2: Simplified activation kernel 
     activation_kernel = Path("/tmp/activation_kernel.cu")
     activation_kernel.write_text("""
-#include <cuda_runtime.h>
-
-template<typename T>
-__device__ float silu_activation(const float& x) {
+extern "C" {
+__device__ float silu_activation(const float x) {
     return x / (1.0f + __expf(-x));
 }
 
-template<typename T>
 __global__ void act_and_mul_kernel_simple(
-    T* __restrict__ out, 
-    const T* __restrict__ input, 
+    float* __restrict__ out, 
+    const float* __restrict__ input, 
     const int d) {
     
     const int token_idx = blockIdx.x;
@@ -57,14 +49,12 @@ __global__ void act_and_mul_kernel_simple(
     const int offset = token_idx * 2 * d;
     
     for (int idx = thread_idx; idx < d; idx += stride) {
-        float x = float(input[offset + idx]);
-        float y = float(input[offset + d + idx]);
-        out[token_idx * d + idx] = T(silu_activation<T>(x) * y);
+        float x = input[offset + idx];
+        float y = input[offset + d + idx];
+        out[token_idx * d + idx] = silu_activation(x) * y;
     }
 }
-
-// Explicit instantiation
-template __global__ void act_and_mul_kernel_simple<float>(float*, const float*, const int);
+}
 """)
     
     # Test 3: Simple quantization kernel

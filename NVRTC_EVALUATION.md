@@ -33,13 +33,17 @@ Implemented PyTorch `_compile_kernel` (NVRTC) backend as alternative to ninja-ba
 - Architecture detection fails (tries 32-bit instead of 64-bit)
 - Missing proper include path setup for GNU libc headers
 
-**Solution**: Define architecture macros and include paths:
+**Solution**: Use CUDA C++ stdlib instead of system headers:
 ```cpp
-nvcc_options = [
-    "-D__LP64__", "-D__SIZE_TYPE__=unsigned long", "-D__PTRDIFF_TYPE__=long",
-    "-I/usr/include/c++/11/x86_64-redhat-linux", "-I/usr/include/gnu"
-]
+// Instead of: #include <cstdint>
+#include <cuda/std/cstdint>
+
+// Instead of: uint32_t, std::int64_t  
+cuda::std::uint32_t, cuda::std::int64_t
+
+// Include path: /usr/local/cuda/include/cuda/std/
 ```
+**Reference**: [CUDA C++ stdlib documentation](https://nvidia.github.io/cccl/libcudacxx/standard_api.html)
 
 ### 2. Thrust Library Integration  
 **Problem**: Thrust headers require `__host__/__device__` annotations
