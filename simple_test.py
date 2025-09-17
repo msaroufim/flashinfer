@@ -14,12 +14,48 @@ extern "C" __global__ void simple_silu_kernel(
     int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n) {
-        float x = input[idx];
-        float y = input[idx + n];
-        out[idx] = (x / (1.0f + __expf(-x))) * y;
+        out[idx] = input[idx] * 2.0f;  // Just multiply by 2 to test basic memory access
     }
 }
 """
+
+# Even simpler test kernel
+MINIMAL_KERNEL = """
+extern "C" __global__ void minimal_kernel(float* out, float* in, int n) {
+    int idx = threadIdx.x;
+    if (idx < n) {
+        out[idx] = in[idx];
+    }
+}
+"""
+
+def test_minimal_kernel():
+    print("Testing minimal kernel...")
+    
+    try:
+        kernel_fn = _compile_kernel(MINIMAL_KERNEL, "minimal_kernel")
+        print("✓ Minimal kernel compiled")
+        
+        n = 8
+        input_data = torch.ones(n, device='cuda', dtype=torch.float32)
+        output_data = torch.zeros(n, device='cuda', dtype=torch.float32)
+        
+        print(f"Before: input={input_data}, output={output_data}")
+        
+        kernel_fn(
+            grid=(1, 1, 1),
+            block=(n, 1, 1),
+            args=[output_data.data_ptr(), input_data.data_ptr(), n]
+        )
+        torch.cuda.synchronize()
+        
+        print(f"After: output={output_data}")
+        print("✓ Minimal kernel worked!")
+        return True
+        
+    except Exception as e:
+        print(f"✗ Minimal kernel failed: {e}")
+        return False
 
 def test_simple_kernel():
     print("Testing simple NVRTC kernel...")
@@ -29,8 +65,8 @@ def test_simple_kernel():
     print("✓ Simple kernel compiled")
     
     # Test with minimal data
-    n = 32
-    input_data = torch.randn(2 * n, device='cuda', dtype=torch.float32)
+    n = 8
+    input_data = torch.ones(n, device='cuda', dtype=torch.float32)
     output_data = torch.zeros(n, device='cuda', dtype=torch.float32)
     
     print(f"Input shape: {input_data.shape}")
@@ -45,10 +81,7 @@ def test_simple_kernel():
         torch.cuda.synchronize()
         print("✓ Simple kernel executed successfully")
         
-        # Verify
-        x = input_data[:n]
-        y = input_data[n:]
-        expected = torch.nn.functional.silu(x) * y
+        expected = input_data * 2.0
         max_diff = torch.max(torch.abs(output_data - expected)).item()
         print(f"✓ Correctness: max_diff = {max_diff:.2e}")
         
@@ -60,6 +93,9 @@ def test_simple_kernel():
 
 if __name__ == "__main__":
     if torch.cuda.is_available():
-        test_simple_kernel()
+        if test_minimal_kernel():
+            test_simple_kernel()
+        else:
+            print("Basic NVRTC setup has issues")
     else:
         print("CUDA not available")
