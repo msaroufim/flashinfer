@@ -247,7 +247,7 @@ class JitSpec:
             nvcc_options.extend(compatible_flags)
         
         for source_path in self.sources:
-            if source_path.suffix != '.cu':
+            if source_path.suffix not in ['.cu', '.cuh']:
                 continue
                 
             source_content = source_path.read_text()

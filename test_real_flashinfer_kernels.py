@@ -9,7 +9,7 @@ def create_minimal_kernel_test():
     """Get real FlashInfer template kernels directly"""
     
     return [
-        (Path("include/flashinfer/quantization.cuh"), ["PackBitsKernel"])
+        (Path("include/flashinfer/quantization.cuh"), ["PackBitsKernel_nvrtc"])
     ]
 
 def test_flashinfer_style_kernels():
