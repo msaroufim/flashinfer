@@ -17,19 +17,14 @@ def benchmark_compilation():
         print("Run from flashinfer root directory")
         return
     
-    # Use a real kernel file
-    test_files = [
-        csrc_dir / "activation.cu",
-        csrc_dir / "norm.cu", 
-        csrc_dir / "rope.cu"
-    ]
+    # Use a simple kernel file that doesn't need complex headers
+    test_file = csrc_dir / "nv_internal/tensorrt_llm/kernels/delayStream.cu"
+    kernel_names = ["delayStreamKernel"]
     
-    existing_files = [f for f in test_files if f.exists()]
-    if not existing_files:
-        print("No test files found")
+    if not test_file.exists():
+        print(f"Test file not found: {test_file}")
         return
-    
-    test_file = existing_files[0]
+        
     print(f"Testing with: {test_file}")
     
     # Test ninja compilation
@@ -45,10 +40,6 @@ def benchmark_compilation():
     
     # Test NVRTC compilation  
     print("NVRTC compilation...")
-    
-    # You need to specify actual kernel names from the source file
-    # For example, from activation.cu: ["silu_and_mul_kernel", "gelu_kernel"]
-    kernel_names = ["your_actual_kernel_names_here"]  # TODO: Replace with real kernel names
     
     start = time.time()
     spec_nvrtc = gen_jit_spec(

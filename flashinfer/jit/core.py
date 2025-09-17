@@ -231,7 +231,15 @@ class JitSpec:
         
         compiled_kernels = {}
         include_dirs = [str(p) for p in self.extra_include_dirs] if self.extra_include_dirs else []
-        nvcc_options = self.extra_cuda_cflags or []
+        include_dirs.extend([
+            str(jit_env.FLASHINFER_INCLUDE_DIR),
+            str(jit_env.FLASHINFER_CSRC_DIR)
+        ])
+        
+        nvcc_options = []
+        if self.extra_cuda_cflags:
+            nvcc_options = [flag for flag in self.extra_cuda_cflags 
+                          if not flag.startswith("--threads")]
         
         for source_path in self.sources:
             if source_path.suffix != '.cu':
