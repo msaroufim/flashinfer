@@ -114,6 +114,7 @@ cudaError_t SegmentPackBits(bool* input, uint8_t* output, IdType* input_indptr,
   return cudaSuccess;
 }
 
+
 }  // namespace quantization
 }  // namespace flashinfer
 

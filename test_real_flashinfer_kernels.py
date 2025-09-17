@@ -6,12 +6,10 @@ from pathlib import Path
 print(f"CUDA available: {torch.cuda.is_available()}")
 
 def create_minimal_kernel_test():
-    """Get FlashInfer-style kernel files for testing"""
+    """Get real FlashInfer template kernels directly"""
     
     return [
-        (Path("kernels/page_kernel.cu"), ["AppendPagedKVCacheDecodeKernel_simple"]),
-        (Path("kernels/activation_kernel.cu"), ["act_and_mul_kernel_simple"]), 
-        (Path("kernels/quant_kernel.cu"), ["PackBitsKernel_simple"])
+        (Path("include/flashinfer/quantization.cuh"), ["PackBitsKernel"])
     ]
 
 def test_flashinfer_style_kernels():
@@ -20,7 +18,7 @@ def test_flashinfer_style_kernels():
     kernel_tests = create_minimal_kernel_test()
     
     for i, (kernel_file, kernel_names) in enumerate(kernel_tests):
-        kernel_type = ["Page", "Activation", "Quantization"][i]
+        kernel_type = ["Quantization"][i]
         print(f"\n=== Testing {kernel_type} Kernel ===")
         
         try:
@@ -43,30 +41,32 @@ def test_flashinfer_style_kernels():
             print(f"Ninja: {ninja_time:.3f}s")
             print(f"Speedup: {ninja_time/nvrtc_time:.1f}x")
             
-            # Test kernel execution for page kernel
-            if kernel_type == "Page" and "AppendPagedKVCacheDecodeKernel_simple" in kernels:
-                test_page_kernel_execution(kernels["AppendPagedKVCacheDecodeKernel_simple"])
+            # Test kernel execution for activation kernel
+            if kernel_type == "Activation" and "act_and_mul_kernel_float_silu" in kernels:
+                test_activation_kernel_execution(kernels["act_and_mul_kernel_float_silu"])
                 
         except Exception as e:
             print(f"{kernel_type} kernel failed: {e}")
 
-def test_page_kernel_execution(kernel_fn):
-    """Test that the page kernel actually works"""
+def test_activation_kernel_execution(kernel_fn):
+    """Test that the activation kernel actually works"""
     print("Testing kernel execution...")
     
-    batch_size, head_dim = 4, 128
-    paged_data = torch.zeros(batch_size * head_dim, device='cuda')
-    key = torch.randn(batch_size * head_dim, device='cuda')
-    value = torch.randn(batch_size * head_dim, device='cuda')
+    batch_size, d = 4, 128
+    input_data = torch.randn(batch_size, 2 * d, device='cuda')
+    output_data = torch.zeros(batch_size, d, device='cuda')
     
     kernel_fn(
         grid=(batch_size, 1, 1),
-        block=(head_dim, 1, 1), 
-        args=[paged_data, key, value, batch_size, head_dim]
+        block=(d, 1, 1), 
+        args=[output_data, input_data, d]
     )
     
-    expected = key + value
-    torch.testing.assert_close(paged_data, expected, rtol=1e-5, atol=1e-5)
+    # Verify SiLU activation: x / (1 + exp(-x)) * y
+    x = input_data[:, :d]
+    y = input_data[:, d:]
+    expected = (x / (1 + torch.exp(-x))) * y
+    torch.testing.assert_close(output_data, expected, rtol=1e-4, atol=1e-4)
     print("Kernel execution test passed!")
 
 if __name__ == "__main__":

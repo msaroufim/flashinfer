@@ -63,6 +63,7 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
 #endif
 }
 
+
 }  // namespace activation
 }  // namespace flashinfer
 
