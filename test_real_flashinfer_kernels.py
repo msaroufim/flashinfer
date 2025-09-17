@@ -57,17 +57,19 @@ __global__ void act_and_mul_kernel_simple(
 }
 """)
     
-    # Test 3: Simple quantization kernel
+    # Test 3: Simple quantization kernel using CUDA C++ stdlib
     quant_kernel = Path("/tmp/quant_kernel.cu") 
     quant_kernel.write_text("""
+#include <cuda/std/cstdint>
+
 extern "C" {
 __global__ void PackBitsKernel_simple(
     bool* input, 
-    unsigned char* output, 
-    long long num_elements) {
+    cuda::std::uint8_t* output, 
+    cuda::std::int64_t num_elements) {
     
-    long long idx = blockIdx.x * blockDim.x + threadIdx.x;
-    long long byte_idx = idx / 8;
+    cuda::std::int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    cuda::std::int64_t byte_idx = idx / 8;
     int bit_pos = idx % 8;
     
     if (idx < num_elements) {
