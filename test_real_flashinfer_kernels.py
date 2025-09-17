@@ -48,12 +48,19 @@ def test_activation_kernel_execution(kernel_fn):
     print("Testing kernel execution...")
     
     batch_size, d = 4, 128
-    input_data = torch.randn(batch_size, 2 * d, device='cuda')
-    output_data = torch.zeros(batch_size, d, device='cuda')
+    # Ensure tensors are contiguous and properly aligned
+    input_data = torch.randn(batch_size, 2 * d, device='cuda', dtype=torch.float32).contiguous()
+    output_data = torch.zeros(batch_size, d, device='cuda', dtype=torch.float32).contiguous()
+    
+    # Use the same block size calculation as original FlashInfer
+    vec_size = 16 // 4  # 16 / sizeof(float)
+    block_size = min(d // vec_size, 1024)
+    
+    print(f"Launch params: grid=({batch_size},1,1), block=({block_size},1,1), d={d}")
     
     kernel_fn(
         grid=(batch_size, 1, 1),
-        block=(min(d // 4, 1024), 1, 1), 
+        block=(block_size, 1, 1), 
         args=[output_data.data_ptr(), input_data.data_ptr(), d]
     )
     
