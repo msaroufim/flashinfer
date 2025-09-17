@@ -60,15 +60,14 @@ __global__ void act_and_mul_kernel_simple(
     # Test 3: Simple quantization kernel
     quant_kernel = Path("/tmp/quant_kernel.cu") 
     quant_kernel.write_text("""
-#include <cuda_runtime.h>
-
+extern "C" {
 __global__ void PackBitsKernel_simple(
     bool* input, 
-    uint8_t* output, 
-    int64_t num_elements) {
+    unsigned char* output, 
+    long long num_elements) {
     
-    int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int64_t byte_idx = idx / 8;
+    long long idx = blockIdx.x * blockDim.x + threadIdx.x;
+    long long byte_idx = idx / 8;
     int bit_pos = idx % 8;
     
     if (idx < num_elements) {
@@ -76,6 +75,7 @@ __global__ void PackBitsKernel_simple(
             atomicOr(&output[byte_idx], (1 << bit_pos));
         }
     }
+}
 }
 """)
     
