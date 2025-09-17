@@ -67,7 +67,7 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
 
 #pragma unroll 1
   for (uint32_t idx = thread_idx; idx < d / vec_size; idx += stride) {
-    vec_t<float, vec_size> x_vec, y_vec, out_vec;
+    vec_t<T, vec_size> x_vec, y_vec, out_vec;
     x_vec.cast_load(input + offset + idx * vec_size);
     y_vec.cast_load(input + offset + d + idx * vec_size);
 #pragma unroll
@@ -81,8 +81,8 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
   // process the remaining elements
 #pragma unroll 1
   for (int64_t idx = thread_idx; idx < d % (stride * vec_size); idx += stride) {
-    float x = input[offset + remaining_offset + idx],
-          y = input[offset + remaining_offset + d + idx];
+    T x = input[offset + remaining_offset + idx],
+      y = input[offset + remaining_offset + d + idx];
     out[token_idx * d + remaining_offset + idx] = Activation(x) * y;
   }
 
