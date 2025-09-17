@@ -234,11 +234,10 @@ class JitSpec:
         include_dirs.extend([
             str(jit_env.FLASHINFER_INCLUDE_DIR),
             str(jit_env.FLASHINFER_CSRC_DIR),
-            "/usr/include/c++/11",  # System C++ headers
-            "/usr/include/c++/12", 
+            "/usr/include/c++/11",
+            "/usr/include/c++/11/tr1", 
             "/usr/include",
-            "/usr/local/cuda/include/cub",  # CUB headers
-            "/usr/local/cuda/include/thrust"  # Thrust headers
+            "/usr/local/cuda/include"
         ])
         
         nvcc_options = [
