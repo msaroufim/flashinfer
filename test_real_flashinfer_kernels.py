@@ -9,7 +9,7 @@ def create_minimal_kernel_test():
     """Get real FlashInfer template kernels directly"""
     
     return [
-        (Path("include/flashinfer/activation.cuh"), ["flashinfer::activation::act_and_mul_kernel<float, float(*)(const float&)>"])
+        (Path("include/flashinfer/activation.cuh"), ["flashinfer::activation::act_and_mul_kernel<float, silu_nvrtc>"])
     ]
 
 def test_flashinfer_style_kernels():

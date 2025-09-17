@@ -42,6 +42,17 @@ namespace flashinfer {
 
 namespace activation {
 
+// Define activation functions in the header for NVRTC compatibility
+__device__ __forceinline__ float silu_nvrtc(const float& val) { return val / (1.0f + __expf(-val)); }
+__device__ __forceinline__ float gelu_nvrtc(const float& val) {
+  constexpr float kAlpha = 0.7071067811865476f; // M_SQRT1_2
+  return val * 0.5f * (1.0f + erff(val * kAlpha));
+}
+__device__ __forceinline__ float gelu_tanh_nvrtc(const float& val) {
+  const float cdf = 0.5f * (1.0f + tanhf((0.7978845608028654f * (val + 0.044715f * val * val * val))));
+  return val * cdf;
+}
+
 template <typename T, float (*Activation)(const float&)>
 __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ input, const int d) {
   constexpr uint32_t vec_size = 16 / sizeof(T);
