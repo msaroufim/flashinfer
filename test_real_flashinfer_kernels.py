@@ -65,7 +65,7 @@ __global__ void act_and_mul_kernel_simple(
 extern "C" {
 __global__ void PackBitsKernel_simple(
     bool* input, 
-    cuda::std::uint8_t* output, 
+    unsigned char* output, 
     cuda::std::int64_t num_elements) {
     
     cuda::std::int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -74,7 +74,7 @@ __global__ void PackBitsKernel_simple(
     
     if (idx < num_elements) {
         if (input[idx]) {
-            atomicOr(&output[byte_idx], (1 << bit_pos));
+            atomicOr((unsigned int*)&output[byte_idx], (unsigned int)(1 << bit_pos));
         }
     }
 }
