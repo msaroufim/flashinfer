@@ -240,9 +240,7 @@ class JitSpec:
             "/usr/local/cuda/include"
         ])
         
-        nvcc_options = [
-            "--default-device"  # Treat unannotated functions as __device__
-        ]
+        nvcc_options = []
         if self.extra_cuda_cflags:
             nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
                                 "-lineinfo", "-g", "--ptxas-options", "-static-global-template-stub"}
