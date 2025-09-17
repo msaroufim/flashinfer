@@ -238,13 +238,16 @@ class JitSpec:
             "/usr/include/c++/11/x86_64-redhat-linux",
             "/usr/include/c++/11/tr1", 
             "/usr/include",
+            "/usr/include/gnu",
             "/usr/local/cuda/include"
         ])
         
         nvcc_options = [
             "-D__LP64__",
             "-D__SIZE_TYPE__=unsigned long",
-            "-D__PTRDIFF_TYPE__=long"
+            "-D__PTRDIFF_TYPE__=long",
+            "-D__WORDSIZE=64",
+            "-D_GNU_SOURCE"
         ]
         if self.extra_cuda_cflags:
             nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
