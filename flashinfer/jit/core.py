@@ -238,8 +238,10 @@ class JitSpec:
         
         nvcc_options = []
         if self.extra_cuda_cflags:
+            nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
+                                "-lineinfo", "-g", "--ptxas-options", "-static-global-template-stub"}
             nvcc_options = [flag for flag in self.extra_cuda_cflags 
-                          if not flag.startswith("--threads")]
+                          if not any(flag.startswith(incomp) for incomp in nvrtc_incompatible)]
         
         for source_path in self.sources:
             if source_path.suffix != '.cu':
