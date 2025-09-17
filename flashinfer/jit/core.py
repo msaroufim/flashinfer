@@ -234,12 +234,8 @@ class JitSpec:
         include_dirs.extend([
             str(jit_env.FLASHINFER_INCLUDE_DIR),
             str(jit_env.FLASHINFER_CSRC_DIR),
-            "/usr/include/c++/11",
-            "/usr/include/c++/11/x86_64-redhat-linux",
-            "/usr/include/c++/11/tr1", 
-            "/usr/include",
-            "/usr/include/gnu",
-            "/usr/local/cuda/include"
+            "/usr/local/cuda/include",
+            "/usr/local/cuda/include/cuda/std"
         ])
         
         nvcc_options = []
