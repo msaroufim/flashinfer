@@ -28,7 +28,7 @@ __global__ void vector_mul(const float* a, const float* b, float* c, int n) {
 spec = gen_jit_spec(
     name="test_nvrtc",
     sources=[simple_kernel],
-    extra_cuda_cflags=["-std=c++17"]  # Use only NVRTC-compatible flags
+    extra_cuda_cflags=[]  # Let PyTorch handle all flags for NVRTC
 )
 
 kernel_names = ["vector_add", "vector_mul"]
