@@ -8,7 +8,7 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 # Very simple kernel without templates first
 SIMPLE_KERNEL = """
-extern "C" __global__ void simple_silu_kernel(
+__global__ void simple_silu_kernel(
     float* __restrict__ out,
     const float* __restrict__ input,
     int n) {
@@ -21,7 +21,7 @@ extern "C" __global__ void simple_silu_kernel(
 
 # Even simpler test kernel
 MINIMAL_KERNEL = """
-extern "C" __global__ void minimal_kernel(float* out, float* in, int n) {
+__global__ void minimal_kernel(float* out, float* in, int n) {
     int idx = threadIdx.x;
     if (idx < n) {
         out[idx] = in[idx];
