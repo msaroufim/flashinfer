@@ -235,6 +235,7 @@ class JitSpec:
             str(jit_env.FLASHINFER_INCLUDE_DIR),
             str(jit_env.FLASHINFER_CSRC_DIR),
             "/usr/include/c++/11",
+            "/usr/include/c++/11/x86_64-redhat-linux",
             "/usr/include/c++/11/tr1", 
             "/usr/include",
             "/usr/local/cuda/include"
