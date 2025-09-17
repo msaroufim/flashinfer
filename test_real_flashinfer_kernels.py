@@ -9,7 +9,7 @@ def create_minimal_kernel_test():
     """Get real FlashInfer template kernels directly"""
     
     return [
-        (Path("include/flashinfer/quantization.cuh"), ["PackBitsKernel_nvrtc"])
+        (Path("include/flashinfer/activation.cuh"), ["act_and_mul_kernel"])
     ]
 
 def test_flashinfer_style_kernels():
@@ -18,7 +18,7 @@ def test_flashinfer_style_kernels():
     kernel_tests = create_minimal_kernel_test()
     
     for i, (kernel_file, kernel_names) in enumerate(kernel_tests):
-        kernel_type = ["Quantization"][i]
+        kernel_type = ["Activation"][i]
         print(f"\n=== Testing {kernel_type} Kernel ===")
         
         try:
@@ -42,8 +42,8 @@ def test_flashinfer_style_kernels():
             print(f"Speedup: {ninja_time/nvrtc_time:.1f}x")
             
             # Test kernel execution for activation kernel
-            if kernel_type == "Activation" and "act_and_mul_kernel_float_silu" in kernels:
-                test_activation_kernel_execution(kernels["act_and_mul_kernel_float_silu"])
+            if kernel_type == "Activation" and "act_and_mul_kernel" in kernels:
+                test_activation_kernel_execution(kernels["act_and_mul_kernel"])
                 
         except Exception as e:
             print(f"{kernel_type} kernel failed: {e}")

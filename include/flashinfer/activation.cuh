@@ -17,6 +17,7 @@
 #ifndef FLASHINFER_ACTIVATION_CUH_
 #define FLASHINFER_ACTIVATION_CUH_
 
+#include <cuda/std/cstdint>
 #include "math.cuh"
 #include "utils.cuh"
 #include "vec_dtypes.cuh"
@@ -62,6 +63,7 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
   asm volatile("griddepcontrol.launch_dependents;");
 #endif
 }
+
 
 
 }  // namespace activation
