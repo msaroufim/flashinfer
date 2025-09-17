@@ -6,85 +6,12 @@ from pathlib import Path
 print(f"CUDA available: {torch.cuda.is_available()}")
 
 def create_minimal_kernel_test():
-    """Create standalone versions of FlashInfer kernels without dependencies"""
-    
-    # Test 1: Simplified Page kernel (memory copy pattern)
-    page_kernel = Path("/tmp/page_kernel.cu")
-    page_kernel.write_text("""
-extern "C" {
-__global__ void AppendPagedKVCacheDecodeKernel_simple(
-    float* __restrict__ paged_data,
-    float* __restrict__ key, 
-    float* __restrict__ value,
-    int batch_size,
-    int head_dim) {
-    
-    int tx = threadIdx.x;
-    int batch_idx = blockIdx.x;
-    
-    if (batch_idx < batch_size && tx < head_dim) {
-        int offset = batch_idx * head_dim + tx;
-        paged_data[offset] = key[offset] + value[offset];
-    }
-}
-}
-""")
-    
-    # Test 2: Simplified activation kernel 
-    activation_kernel = Path("/tmp/activation_kernel.cu")
-    activation_kernel.write_text("""
-extern "C" {
-__device__ float silu_activation(const float x) {
-    return x / (1.0f + __expf(-x));
-}
-
-__global__ void act_and_mul_kernel_simple(
-    float* __restrict__ out, 
-    const float* __restrict__ input, 
-    const int d) {
-    
-    const int token_idx = blockIdx.x;
-    const int thread_idx = threadIdx.x;
-    const int stride = blockDim.x;
-    const int offset = token_idx * 2 * d;
-    
-    for (int idx = thread_idx; idx < d; idx += stride) {
-        float x = input[offset + idx];
-        float y = input[offset + d + idx];
-        out[token_idx * d + idx] = silu_activation(x) * y;
-    }
-}
-}
-""")
-    
-    # Test 3: Simple quantization kernel using CUDA C++ stdlib
-    quant_kernel = Path("/tmp/quant_kernel.cu") 
-    quant_kernel.write_text("""
-#include <cuda/std/cstdint>
-
-extern "C" {
-__global__ void PackBitsKernel_simple(
-    bool* input, 
-    unsigned char* output, 
-    cuda::std::int64_t num_elements) {
-    
-    cuda::std::int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    cuda::std::int64_t byte_idx = idx / 8;
-    int bit_pos = idx % 8;
-    
-    if (idx < num_elements) {
-        if (input[idx]) {
-            atomicOr((unsigned int*)&output[byte_idx], (unsigned int)(1 << bit_pos));
-        }
-    }
-}
-}
-""")
+    """Get FlashInfer-style kernel files for testing"""
     
     return [
-        (page_kernel, ["AppendPagedKVCacheDecodeKernel_simple"]),
-        (activation_kernel, ["act_and_mul_kernel_simple"]), 
-        (quant_kernel, ["PackBitsKernel_simple"])
+        (Path("kernels/page_kernel.cu"), ["AppendPagedKVCacheDecodeKernel_simple"]),
+        (Path("kernels/activation_kernel.cu"), ["act_and_mul_kernel_simple"]), 
+        (Path("kernels/quant_kernel.cu"), ["PackBitsKernel_simple"])
     ]
 
 def test_flashinfer_style_kernels():
