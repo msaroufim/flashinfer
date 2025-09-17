@@ -19,12 +19,40 @@ Implemented PyTorch `_compile_kernel` (NVRTC) backend as alternative to ninja-ba
 ❌ **Thrust library dependencies** (not NVRTC compatible)  
 ❌ **FlashInfer's header hierarchy** (math.cuh, pos_enc.cuh, etc.)  
 
-## Known Issues
-🔍 **System header compatibility**: NVRTC struggles with GCC-specific headers  
-- Missing `__SIZE_TYPE__`, `__PTRDIFF_TYPE__` macros
-- 32/64-bit architecture detection problems  
-- GNU stubs header conflicts (`stubs-32.h` vs `stubs-64.h`)
-- **This is solvable** but requires more investigation into NVRTC header setup
+## Gaps to Fix for _compile_kernel
+
+### 1. System Header Compatibility
+**Problem**: NVRTC can't compile code using C++ standard library headers
+```
+/usr/include/c++/11/x86_64-redhat-linux/bits/c++config.h(284): error: identifier "__SIZE_TYPE__" is undefined
+/usr/include/gnu/stubs.h(7): catastrophic error: cannot open source file "gnu/stubs-32.h"
+```
+
+**Root cause**: 
+- NVRTC doesn't define GCC compiler macros (`__SIZE_TYPE__`, `__PTRDIFF_TYPE__`)
+- Architecture detection fails (tries 32-bit instead of 64-bit)
+- Missing proper include path setup for GNU libc headers
+
+**Solution**: Define architecture macros and include paths:
+```cpp
+nvcc_options = [
+    "-D__LP64__", "-D__SIZE_TYPE__=unsigned long", "-D__PTRDIFF_TYPE__=long",
+    "-I/usr/include/c++/11/x86_64-redhat-linux", "-I/usr/include/gnu"
+]
+```
+
+### 2. Thrust Library Integration  
+**Problem**: Thrust headers require `__host__/__device__` annotations
+```
+error: A function without execution space annotations is considered a host function, 
+and host functions are not allowed in JIT mode
+```
+
+**Solution**: Use `--default-device` flag (if supported) or avoid Thrust
+
+### 3. Template Instantiation
+**Problem**: FlashInfer uses heavy C++ templates that may not instantiate properly in NVRTC
+**Solution**: Explicit template instantiation or simpler kernel designs
 
 ## Technical Details
 
@@ -56,7 +84,10 @@ Real FlashInfer kernels fail because:
 ## Code Changes
 - **Modified**: `flashinfer/jit/core.py` (lines 229-282)
 - **Added**: `build_with_nvrtc()`, `build_and_load_with_nvrtc()` methods
-- **Tests**: `test_nvrtc.py`, `test_real_kernels.py`
+- **Tests**: 
+  - `test_nvrtc.py` - Simple kernel performance test (2.2x speedup)
+  - `test_real_kernels.py` - FlashInfer kernel compatibility tests (fails)
+  - `test_real_flashinfer_kernels.py` - Simplified FlashInfer-style kernels (should work)
 
 ## Conclusion
 NVRTC provides significant speedup but is incompatible with FlashInfer's architecture. The current ninja-based system remains the best approach for FlashInfer's complex, templated kernels.
