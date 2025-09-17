@@ -18,9 +18,25 @@
 #define FLASHINFER_ACTIVATION_CUH_
 
 #include <cuda/std/cstdint>
-#include "math.cuh"
-#include "utils.cuh"
-#include "vec_dtypes.cuh"
+// For NVRTC compilation - comment out FlashInfer headers that aren't needed
+// #include "math.cuh"
+// #include "utils.cuh"
+// #include "vec_dtypes.cuh"
+
+// Minimal vec_t definition for NVRTC
+template<typename T, int N>
+struct vec_t {
+  T data[N];
+  __device__ T& operator[](int i) { return data[i]; }
+  __device__ void cast_load(const T* ptr) {
+    #pragma unroll
+    for(int i = 0; i < N; i++) data[i] = ptr[i];
+  }
+  __device__ void cast_store(T* ptr) {
+    #pragma unroll
+    for(int i = 0; i < N; i++) ptr[i] = data[i];
+  }
+};
 
 namespace flashinfer {
 
