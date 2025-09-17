@@ -242,8 +242,7 @@ class JitSpec:
         ])
         
         nvcc_options = [
-            "--default-device",  # Treat unannotated functions as __device__
-            "-std=c++17"         # Ensure C++17 support
+            "--default-device"  # Treat unannotated functions as __device__
         ]
         if self.extra_cuda_cflags:
             nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
