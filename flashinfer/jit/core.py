@@ -226,6 +226,43 @@ class JitSpec:
         with lock:
             run_ninja(jit_env.FLASHINFER_JIT_DIR, self.ninja_path, verbose)
 
+    def build_with_nvrtc(self, kernel_names: List[str]) -> Dict[str, callable]:
+        from torch.cuda import _compile_kernel
+        
+        compiled_kernels = {}
+        include_dirs = [str(p) for p in self.extra_include_dirs] if self.extra_include_dirs else []
+        include_dirs.extend([
+            str(jit_env.FLASHINFER_INCLUDE_DIR),
+            str(jit_env.FLASHINFER_CSRC_DIR),
+            "/usr/local/cuda/include",
+            "/usr/local/cuda/include/cuda/std"
+        ])
+        
+        nvcc_options = []
+        if self.extra_cuda_cflags:
+            nvrtc_incompatible = {"-O3", "--use_fast_math", "--threads", "--expt-relaxed-constexpr", 
+                                "-lineinfo", "-g", "--ptxas-options", "-static-global-template-stub"}
+            compatible_flags = [flag for flag in self.extra_cuda_cflags 
+                              if not any(flag.startswith(incomp) for incomp in nvrtc_incompatible)]
+            nvcc_options.extend(compatible_flags)
+        
+        for source_path in self.sources:
+            if source_path.suffix not in ['.cu', '.cuh']:
+                continue
+                
+            source_content = source_path.read_text()
+            
+            for kernel_name in kernel_names:
+                compiled_kernel = _compile_kernel(
+                    source_content,
+                    kernel_name,
+                    cuda_include_dirs=include_dirs,
+                    nvcc_options=nvcc_options
+                )
+                compiled_kernels[kernel_name] = compiled_kernel
+        
+        return compiled_kernels
+
     def load(self, so_path: Path, class_name: str = None):
         load_class = class_name is not None
         loader = torch.classes if load_class else torch.ops
@@ -248,6 +285,11 @@ class JitSpec:
             result = self.load(so_path, class_name)
 
         return result
+    
+    def build_and_load_with_nvrtc(self, kernel_names: List[str]):
+        if self.is_aot:
+            return self.load(self.aot_path)
+        return self.build_with_nvrtc(kernel_names)
 
 
 def gen_jit_spec(

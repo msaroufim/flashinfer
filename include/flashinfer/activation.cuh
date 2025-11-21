@@ -17,13 +17,41 @@
 #ifndef FLASHINFER_ACTIVATION_CUH_
 #define FLASHINFER_ACTIVATION_CUH_
 
-#include "math.cuh"
-#include "utils.cuh"
-#include "vec_dtypes.cuh"
+#include <cuda/std/cstdint>
+// For NVRTC compilation - comment out FlashInfer headers that aren't needed
+// #include "math.cuh"
+// #include "utils.cuh"
+// #include "vec_dtypes.cuh"
+
+// Minimal vec_t definition for NVRTC
+template<typename T, int N>
+struct vec_t {
+  T data[N];
+  __device__ T& operator[](int i) { return data[i]; }
+  __device__ void cast_load(const T* ptr) {
+    #pragma unroll
+    for(int i = 0; i < N; i++) data[i] = ptr[i];
+  }
+  __device__ void cast_store(T* ptr) {
+    #pragma unroll
+    for(int i = 0; i < N; i++) ptr[i] = data[i];
+  }
+};
 
 namespace flashinfer {
 
 namespace activation {
+
+// Define activation functions in the header for NVRTC compatibility
+__device__ __forceinline__ float silu_nvrtc(const float& val) { return val / (1.0f + __expf(-val)); }
+__device__ __forceinline__ float gelu_nvrtc(const float& val) {
+  constexpr float kAlpha = 0.7071067811865476f; // M_SQRT1_2
+  return val * 0.5f * (1.0f + erff(val * kAlpha));
+}
+__device__ __forceinline__ float gelu_tanh_nvrtc(const float& val) {
+  const float cdf = 0.5f * (1.0f + tanhf((0.7978845608028654f * (val + 0.044715f * val * val * val))));
+  return val * cdf;
+}
 
 template <typename T, float (*Activation)(const float&)>
 __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ input, const int d) {
@@ -39,7 +67,7 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
 
 #pragma unroll 1
   for (uint32_t idx = thread_idx; idx < d / vec_size; idx += stride) {
-    vec_t<float, vec_size> x_vec, y_vec, out_vec;
+    vec_t<T, vec_size> x_vec, y_vec, out_vec;
     x_vec.cast_load(input + offset + idx * vec_size);
     y_vec.cast_load(input + offset + d + idx * vec_size);
 #pragma unroll
@@ -53,8 +81,8 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
   // process the remaining elements
 #pragma unroll 1
   for (int64_t idx = thread_idx; idx < d % (stride * vec_size); idx += stride) {
-    float x = input[offset + remaining_offset + idx],
-          y = input[offset + remaining_offset + d + idx];
+    T x = input[offset + remaining_offset + idx],
+      y = input[offset + remaining_offset + d + idx];
     out[token_idx * d + remaining_offset + idx] = Activation(x) * y;
   }
 
@@ -62,6 +90,8 @@ __global__ void act_and_mul_kernel(T* __restrict__ out, const T* __restrict__ in
   asm volatile("griddepcontrol.launch_dependents;");
 #endif
 }
+
+
 
 }  // namespace activation
 }  // namespace flashinfer

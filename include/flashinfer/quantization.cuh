@@ -114,6 +114,12 @@ cudaError_t SegmentPackBits(bool* input, uint8_t* output, IdType* input_indptr,
   return cudaSuccess;
 }
 
+
+// NVRTC explicit instantiation
+__global__ void PackBitsKernel_nvrtc(bool* input, uint8_t* output, int64_t num_elements) {
+  PackBitsKernel<BitOrder::kBig>(input, output, num_elements);
+}
+
 }  // namespace quantization
 }  // namespace flashinfer
 
